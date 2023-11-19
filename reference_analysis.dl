@@ -123,6 +123,26 @@ borrows_after(l, x, y) :-
 	borrow(l, z, _),
 	borrows_before(l, x, y), z != x.
 
+// add
+borrows_after(l, x, y) :-
+	add(l, _, _, _),
+	borrows_before(l, x, y).
+
+// mul
+borrows_after(l, x, y) :-
+	mul(l, _, _, _),
+	borrows_before(l, x, y).
+
+// if
+borrows_after(l, x, y) :-
+	if(l, _),
+	borrows_before(l, x, y).
+
+// return
+borrows_after(l, x, y) :-
+	return(l, _),
+	borrows_before(l, x, y).
+
 // outputs
 .output invalid_instr_at
 .output borrows_before
