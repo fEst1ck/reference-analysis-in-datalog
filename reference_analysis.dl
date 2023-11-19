@@ -77,11 +77,13 @@ invalid_copy(l) :-
 	copy(l, x, _),
 	cannot_drop_at(l, x).
 
+// drop
 .decl invalid_drop(l: Label)
 invalid_drop(l) :-
 	drop(l, x),
 	cannot_drop_at(l, x).
 
+// borrow
 .decl invalid_borrow(l: Label)
 invalid_borrow(l) :-
 	borrow(l, x, _),
@@ -148,9 +150,9 @@ borrows_after(l, x, y) :-
 .output borrows_before
 .output borrows_after
 
-// example
-suc(0, 1).
-suc(1, 2).
-load(0, "x", 0). // x = 0
-borrow(1, "y", "x"). // y = &x
-drop(2, "x"). // drop(x)
+// inputs
+.input suc
+.input load
+.input move
+.input borrow
+.input drop
