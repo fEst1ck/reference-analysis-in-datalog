@@ -1,0 +1,136 @@
+// each instruction has a unique Label
+.type Label = number
+.decl valid_label(l: Label)
+valid_label(l) :- load(l, _, _).
+valid_label(l) :- move(l, _, _).
+valid_label(l) :- copy(l, _, _).
+valid_label(l) :- drop(l, _).
+valid_label(l) :- borrow(l, _, _).
+valid_label(l) :- add(l, _, _, _).
+valid_label(l) :- mul(l, _, _, _).
+valid_label(l) :- if(l, _).
+valid_label(l) :- return(l, _).
+
+.type Var = symbol
+
+// AST
+// load
+.decl load(l: Label, dst: Var, n: number)
+// move
+.decl move(l: Label, dst: Var, src: Var)
+// copy
+.decl copy(l: Label, dst: Var, src: Var)
+// drop
+.decl drop(l: Label, x: Var)
+// borrow local
+.decl borrow(l: Label, dst: Var, src: Var)
+// add
+.decl add(l: Label, dst: Var, src0: Var, src1: Var)
+// mul
+.decl mul(l: Label, dst: Var, src0: Var, src1: Var)
+// if
+.decl if(l: Label, cond: Var)
+// return
+.decl return(l: Label, x: Var)
+
+// successor
+.decl suc(s: Label, t: Label)
+
+// reference safety
+.decl borrows_before(l: Label, borrower: Var, borrowed: Var)
+.decl borrows_after(l: Label, borrower: Var, borrowed: Var)
+
+// cfg join
+borrows_before(l2, borrower, borrowed) :-
+	borrows_after(l1, borrower, borrowed),
+	suc(l1, l2).
+
+// reference safety violations
+.decl cannot_drop_at(l: Label, x: Var)
+cannot_drop_at(l, y) :- borrows_before(l, x, y).
+
+.decl cannot_move_at(l: Label, x: Var)
+cannot_move_at(l, y) :- borrows_before(l, x, y).
+
+.decl invalid_instr_at(l: Label)
+invalid_instr_at(l) :-
+	invalid_load(l);
+	invalid_move(l);
+	invalid_copy(l);
+	invalid_drop(l).
+
+// load
+.decl invalid_load(l: Label)
+invalid_load(l) :-
+	load(l, x, _),
+	cannot_drop_at(l, x).
+
+// move
+.decl invalid_move(l: Label)
+invalid_move(l) :-
+	move(l, x, y),
+	(cannot_drop_at(l, x); cannot_move_at(l, y)).
+
+// copy
+.decl invalid_copy(l: Label)
+invalid_copy(l) :-
+	copy(l, x, _),
+	cannot_drop_at(l, x).
+
+.decl invalid_drop(l: Label)
+invalid_drop(l) :-
+	drop(l, x),
+	cannot_drop_at(l, x).
+
+.decl invalid_borrow(l: Label)
+invalid_borrow(l) :-
+	borrow(l, x, _),
+	cannot_drop_at(l, x).
+
+// borrow graphs
+// load
+borrows_after(l, x, y) :-
+	load(l, _, _),
+	borrows_before(l, x, y).
+
+// move
+borrows_after(l, x, y) :-
+	move(l, x, t),
+	borrows_before(l, t, y).
+
+borrows_after(l, x, y) :-
+	move(l, z, _),
+	borrows_before(l, x, y), x != z.
+
+// copy
+borrows_after(l, x, y) :-
+	copy(l, x, t),
+	borrows_before(l, t, y).
+
+borrows_after(l, x, y) :-
+	borrows_before(l, x, y).
+
+// drop
+borrows_after(l, x, y) :-
+	drop(l, z),
+	borrows_before(l, x, y), x != z.
+
+// borrow
+borrows_after(l, x, y) :-
+	borrow(l, x, y).
+
+borrows_after(l, x, y) :-
+	borrow(l, z, _),
+	borrows_before(l, x, y), z != x.
+
+// outputs
+.output invalid_instr_at
+.output borrows_before
+.output borrows_after
+
+// example
+suc(0, 1).
+suc(1, 2).
+load(0, "x", 0). // x = 0
+borrow(1, "y", "x"). // y = &x
+drop(2, "x"). // drop(x)
